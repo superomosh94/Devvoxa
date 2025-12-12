@@ -138,6 +138,7 @@ filterBtns.forEach((btn) => {
 });
 
 // Currency Conversion
+// Currency Conversion
 const currencySelect = document.getElementById("currency");
 const starterPrice = document.getElementById("starterPrice");
 const growthPrice = document.getElementById("growthPrice");
@@ -145,17 +146,17 @@ const fullPrice = document.getElementById("fullPrice");
 const rateInfo = document.getElementById("rateInfo");
 const rateDate = document.getElementById("rateDate");
 
-// Base prices in USD
+// Base prices in USD (used for calculation)
 const prices = {
   starter: 300,
   growth: 600,
   full: 1000,
 };
 
-// Exchange rates (will be updated from API)
+// Default rates (fallback)
 let exchangeRates = {
   USD: 1,
-  KES: 140,
+  KES: 140, // Fallback
   EUR: 0.85,
   NGN: 410,
   INR: 75,
@@ -163,6 +164,9 @@ let exchangeRates = {
 
 // Format currency based on locale
 function formatCurrency(amount, currency) {
+  // Round to nearest integer for clean look
+  amount = Math.round(amount);
+
   const formatter = new Intl.NumberFormat(undefined, {
     style: "currency",
     currency: currency,
@@ -170,61 +174,57 @@ function formatCurrency(amount, currency) {
     maximumFractionDigits: 0,
   });
 
-  // For currencies not supported by Intl (like KES, NGN)
-  if (currency === "KES") return `KES ${amount.toLocaleString()}`;
-  if (currency === "NGN") return `₦${amount.toLocaleString()}`;
-  if (currency === "INR") return `₹${amount.toLocaleString()}`;
-
   return formatter.format(amount);
 }
 
 // Update prices based on selected currency
 function updatePrices() {
   const currency = currencySelect.value;
+  // Get rate relative to USD
   const rate = exchangeRates[currency];
 
-  starterPrice.textContent = formatCurrency(prices.starter * rate, currency);
-  growthPrice.textContent = formatCurrency(prices.growth * rate, currency);
-  fullPrice.textContent = formatCurrency(prices.full * rate, currency);
-
-  // Save currency preference
-  localStorage.setItem("preferredCurrency", currency);
+  if (rate) {
+    starterPrice.textContent = formatCurrency(prices.starter * rate, currency);
+    growthPrice.textContent = formatCurrency(prices.growth * rate, currency);
+    fullPrice.textContent = formatCurrency(prices.full * rate, currency);
+  }
 }
 
-// Fetch exchange rates from API (using ExchangeRate-API)
+// Fetch exchange rates from free API (open.er-api.com)
 async function fetchExchangeRates() {
   try {
-    // In a real implementation, you would use the actual API endpoint
-    // const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-    // const data = await response.json();
-    // exchangeRates = data.rates;
+    rateInfo.textContent = "Updating rates...";
 
-    // For demo purposes, we'll use hardcoded rates and simulate API call
-    console.log("Fetching exchange rates...");
+    // Using Open Exchange Rates API (Free, No Key)
+    const response = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await response.json();
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (data && data.rates) {
+      exchangeRates = data.rates;
 
-    // Update the displayed date
-    const now = new Date();
-    rateDate.textContent = now.toLocaleString();
+      // Update the displayed date
+      const date = new Date(data.time_last_update_utc);
+      rateDate.textContent = date.toLocaleDateString();
 
-    // Update prices
-    updatePrices();
+      // Force update prices
+      updatePrices();
+      rateInfo.innerHTML = `Live rates from <a href="https://open.er-api.com" target="_blank" rel="noopener noreferrer">open.er-api.com</a>`;
+    }
   } catch (error) {
     console.error("Error fetching exchange rates:", error);
-    rateInfo.textContent = "Using default exchange rates";
+    rateInfo.textContent = "Using estimated rates (Offline)";
   }
 }
 
 // Initialize currency
 function initCurrency() {
-  // Load preferred currency from localStorage or browser locale
-  const preferredCurrency =
-    localStorage.getItem("preferredCurrency") ||
-    (navigator.language.includes("KE") ? "KES" : "USD");
+  // Default to KES as requested
+  const defaultCurrency = "KES";
 
-  // Set the select value
+  // Check if we have a saved preference, otherwise use default
+  const preferredCurrency = localStorage.getItem("preferredCurrency") || defaultCurrency;
+
+  // Set the select value if it exists
   if (currencySelect.querySelector(`option[value="${preferredCurrency}"]`)) {
     currencySelect.value = preferredCurrency;
   }
@@ -234,7 +234,10 @@ function initCurrency() {
 }
 
 // Event listener for currency change
-currencySelect.addEventListener("change", updatePrices);
+currencySelect.addEventListener("change", () => {
+  updatePrices();
+  localStorage.setItem("preferredCurrency", currencySelect.value);
+});
 
 // Contact Form Submission
 const contactForm = document.getElementById("contactForm");
@@ -260,8 +263,74 @@ contactForm.addEventListener("submit", function (e) {
 document.addEventListener("DOMContentLoaded", () => {
   initCurrency();
 
+
   // Trigger hero animation
   setTimeout(() => {
     document.querySelector(".hero-content").classList.add("animate");
   }, 300);
 });
+
+// Portfolio Modal Logic
+const modalOverlay = document.getElementById("portfolioModal");
+const modalCloseBtn = document.getElementById("modalClose");
+const modalImage = document.getElementById("modalImage");
+const modalCategory = document.getElementById("modalCategory");
+const modalTitle = document.getElementById("modalTitle");
+const modalDesc = document.getElementById("modalDesc");
+const modalStack = document.getElementById("modalStack");
+const modalCta = document.getElementById("modalCta");
+
+// Function to open modal
+function openModal(data) {
+  modalImage.src = data.image;
+  modalCategory.textContent = data.category;
+  modalTitle.textContent = data.title;
+  modalDesc.textContent = data.desc;
+  modalStack.textContent = data.stack;
+
+  modalOverlay.classList.add("active");
+  document.body.style.overflow = "hidden"; // Prevent background scrolling
+}
+
+// Function to close modal
+function closeModal() {
+  modalOverlay.classList.remove("active");
+  document.body.style.overflow = "auto"; // Restore scrolling
+}
+
+// Add click listeners to portfolio items
+document.querySelectorAll(".portfolio-item").forEach((item) => {
+  item.addEventListener("click", () => {
+    const data = {
+      image: item.getAttribute("data-image"),
+      category: item.getAttribute("data-category"),
+      title: item.getAttribute("data-title"),
+      desc: item.getAttribute("data-desc"),
+      stack: item.getAttribute("data-stack"),
+    };
+    openModal(data);
+  });
+});
+
+// Close modal event listeners
+modalCloseBtn.addEventListener("click", closeModal);
+modalOverlay.addEventListener("click", (e) => {
+  if (e.target === modalOverlay) {
+    closeModal();
+  }
+});
+
+// Close on Escape key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && modalOverlay.classList.contains("active")) {
+    closeModal();
+  }
+});
+
+// Modal CTA button - smooth scroll to contact
+modalCta.addEventListener("click", () => {
+  closeModal();
+  const contactSection = document.getElementById("contact");
+  contactSection.scrollIntoView({ behavior: "smooth" });
+});
+
