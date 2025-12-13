@@ -1134,6 +1134,10 @@ footer::before {
   background-color: var(--secondary);
 }
 
+.footer-column p {
+  color: #d4af37;
+}
+
 .footer-links {
   list-style: none;
 }
@@ -1162,6 +1166,10 @@ footer::before {
   font-style: italic;
   margin-bottom: 1rem;
   color: rgba(255, 255, 255, 0.7);
+}
+
+.copyright-text {
+  color: white;
 }
 
 /* Animations */

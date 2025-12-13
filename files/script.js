@@ -268,6 +268,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {
     document.querySelector(".hero-content").classList.add("animate");
   }, 300);
+
+  // Auto-update footer year
+  document.getElementById("currentYear").textContent = new Date().getFullYear();
 });
 
 // Portfolio Modal Logic
